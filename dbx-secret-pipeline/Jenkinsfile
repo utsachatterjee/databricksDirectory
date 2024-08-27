@@ -1,0 +1,154 @@
+def  dbx_secret_deploy(dbx_scope,dbx_url,client_id,client_secret,subscription_id,tenant_id){
+    wrap([$class: 'MaskPasswordsBuildWrapper', varPasswordPairs: [[var: 'SECRET_VALUE', password: SECRET_VALUE]], varMaskRegexes: []]) {
+        withCredentials(([
+            string(credentialsId: client_secret, variable: 'AZ_CLIENT_SECRET')])){
+                sh """#!/bin/bash
+	            # Configure Conda environment for deployment & testing
+                echo "Activating conda ${CONDAENV} environment"
+                source ${CONDAPATH}/bin/activate ${CONDAENV}
+
+                # Set current directory
+                DATABRICKS_CLI_PATH=\$(pwd)
+
+                # Export databricks host
+                export DATABRICKS_HOST="${dbx_url}"
+
+                # Export azure service principal auth
+                export ARM_CLIENT_ID="\${client_id}"
+                export ARM_CLIENT_SECRET="\${AZ_CLIENT_SECRET}"
+                export ARM_TENANT_ID="\${tenant_id}"
+                export ARM_SUBSCRIPTION_ID="\${subscription_id}"
+
+                az login --service-principal -u ${client_id} -p ${AZ_CLIENT_SECRET} --tenant ${tenant_id}
+                az account set --subscription="${subscription_id}"
+                az account show
+                
+                echo "Starting secret creation for KEY = ${SECRET_NAME}"
+
+                if [[ "\${SECRET_NAME}" != "DEFAULT" ]] && [[ "\${SECRET_VALUE}" != "DEFAULT" ]] ; then
+                    \${DATABRICKS_CLI_PATH}/databricks secrets put-secret "${dbx_scope}" ${SECRET_NAME} --string-value "${SECRET_VALUE}"
+                fi                
+                """
+            }}}
+
+pipeline {
+    agent {
+        node {
+            label 'linux'
+        }
+    }
+    options { 
+        buildDiscarder logRotator(daysToKeepStr: '14', numToKeepStr: '5')
+    }
+    parameters {
+        separator name: "SECRET_NAME_SEPARATOR", sectionHeader: "Changes will be audited. Double check the Secret name selected.", separatorStyle: "border-width: 0", sectionHeaderStyle: """background-color: #84F8A2; text-align: center padding: 4px; color: #343434; font-size: 22px; font-weight: normal; text-transform: uppercase; font-family: 'Orienta', sans-serif; letter-spacing: 1px; font-style: italic;"""
+        choice description: 'Select the secret name you wish to update.', name: 'SECRET_NAME', choices: ['DEFAULT', 'env_prefix','gd_test','btw-storage-account','btw-raw-data-container']
+        separator name: "SECRET_VALUE_SEPARATOR", sectionHeader: "The secret will not be modified, if no value is given.", separatorStyle: "border-width: 0", sectionHeaderStyle: """background-color: #FEB3CD; text-align: center padding: 4px; color: #343434; font-size: 22px; font-weight: normal; text-transform: uppercase; font-family: 'Orienta', sans-serif; letter-spacing: 1px; font-style: italic;"""
+        password description: 'Input the secret value you wish to update', name: 'SECRET_VALUE', defaultValue: 'DEFAULT'
+    }
+	
+	environment{
+        
+        CONDAPATH                   = "/home/jenkins/anaconda3/"
+        CONDAENV                    = "data-services-databricks-job-iac"
+        CONDA_PYTHON_VERSION        = "3.10"
+        DBX_REPO_MODULE_PATH        = "./azure/east-us/repo"
+        DBX_CLI_VERSION             = "0.212.1"
+        TENANT_ID                   = "<>"
+        SBX_DBX_SCOPE               = "ss-sbx-00"
+        SBX_DBX_WORKSPACE_URL       = "<>"
+        SBX_ARM_CLIENT_ID           = "<>"
+        SBX_ARM_SUBSCRIPTION_ID     = "<>"
+        SBX_ARM_CLIENT_SECRET       = "<>"
+        PRD_DBX_SCOPE               = "ss-prd-00"
+        PRD_DBX_WORKSPACE_URL       = "<>"
+        PRD_ARM_CLIENT_ID           = "<>"
+        PRD_ARM_SUBSCRIPTION_ID     = "<>"
+        PRD_ARM_CLIENT_SECRET       = "<>"
+	}
+	
+    stages {		
+		stage("Install Dependencies") {
+            steps {
+                script {
+                    sh """#!/bin/bash
+                    if ${CONDAPATH}/bin/conda list -n ${CONDAENV}; then
+                       ${CONDAPATH}/bin/conda env remove --name ${CONDAENV}
+                    fi
+
+                    ${CONDAPATH}/bin/conda create --name ${CONDAENV} python=${CONDA_PYTHON_VERSION}
+
+                    echo "Activating conda ${CONDAENV} environment"
+                    source ${CONDAPATH}/bin/activate ${CONDAENV}
+
+                    # Install non-legacy databricks cli
+                    echo "Installing databricks cli"
+                    curl -Lo databricks_cli_${DBX_CLI_VERSION}_linux_amd64.zip https://github.com/databricks/cli/releases/download/v${DBX_CLI_VERSION}/databricks_cli_${DBX_CLI_VERSION}_linux_amd64.zip
+                    curl -Lo databricks.zip.sha256 https://github.com/databricks/cli/releases/download/v${DBX_CLI_VERSION}/databricks_cli_${DBX_CLI_VERSION}_SHA256SUMS
+
+                    if grep 'databricks_cli_${DBX_CLI_VERSION}_linux_amd64.zip' databricks.zip.sha256 | sha256sum -c; then
+                        echo "Checksum verification passed for databricks-cli"
+                        unzip -o databricks_cli_${DBX_CLI_VERSION}_linux_amd64.zip databricks
+                        ./databricks -v
+                    else
+                        echo "Checksum verification failed for databricks-cli"
+                        exit 1
+                    fi
+
+                    # Install specific version of terraform, will use .terraform-version file for specific version
+                    tfenv install
+                    """
+                }
+            }
+        }
+			
+        stage('Update/create databricks Secret') {
+            steps {
+                script {
+                    // feature branch
+                    if (env.BRANCH_NAME == 'feature/sandbox') {
+                        stage("Deploy Secret Value SBX") {
+                            dbx_secret_deploy(SBX_DBX_SCOPE,SBX_DBX_WORKSPACE_URL,SBX_ARM_CLIENT_ID,SBX_ARM_CLIENT_SECRET,SBX_ARM_SUBSCRIPTION_ID,TENANT_ID)
+                        }
+                    }
+                    if (env.BRANCH_NAME == 'develop') {
+                        stage("Deploy Secret Value Dev") {
+                            dbx_secret_deploy(DEV_DBX_SCOPE,DEV_DBX_WORKSPACE_URL,DEV_ARM_CLIENT_ID,DEV_ARM_CLIENT_SECRET,DEV_ARM_SUBSCRIPTION_ID,TENANT_ID)
+                            }
+                    }
+                    
+                    if (env.BRANCH_NAME.startsWith('release/next')) {
+                        stage("Deploy Secret Value TST") {
+                            dbx_secret_deploy(TST_DBX_SCOPE,TST_DBX_WORKSPACE_URL,TST_ARM_CLIENT_ID,TST_ARM_CLIENT_SECRET,TST_ARM_SUBSCRIPTION_ID,TENANT_ID)
+
+                        }
+                    }
+                    if (env.BRANCH_NAME == 'main') {
+                        stage("Deploy Secret Value PRD") {
+                           dbx_secret_deploy(PRD_DBX_SCOPE,PRD_DBX_WORKSPACE_URL,PRD_ARM_CLIENT_ID,PRD_ARM_CLIENT_SECRET,PRD_ARM_SUBSCRIPTION_ID,TENANT_ID) 
+                        }
+                    }
+                }
+            }
+        }
+    }
+    post {
+        // Clean after build
+        always {
+            cleanWs(
+                cleanWhenAborted : true,
+                cleanWhenFailure : true,
+                cleanWhenNotBuilt : false,
+                cleanWhenSuccess : true,
+                cleanWhenUnstable : true,
+                skipWhenFailed : false,
+                deleteDirs: true,
+                notFailBuild : true,
+                disableDeferredWipeout: true,
+                patterns: [[pattern: '.git', type: 'INCLUDE'],
+                            [pattern: 'impl', type: 'INCLUDE'],
+                            [pattern: 'modules', type: 'INCLUDE'],
+                            [pattern: 'build_cache/**', type: 'INCLUDE']])
+        }
+    }
+}

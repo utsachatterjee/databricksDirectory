@@ -1,0 +1,22 @@
+{
+  "sbx": {
+    "ARM_CLIENT_ID": "5bd9a193-1e5d-45ad-913d-47b8e1961ce5",
+    "ARM_SUBSCRIPTION_ID": "8b2d652f-ca90-465b-b843-f853602277cc",
+    "ARM_TENANT_ID": "92867854-71a8-42f2-898a-6953be9825e8"
+  },
+  "dev": {
+    "ARM_CLIENT_ID": "b3a6caa5-0a87-4134-b4bf-bb671f0fd3ba",
+    "ARM_SUBSCRIPTION_ID": "1146699b-4e02-44a9-bf97-de10ab5006d0",
+    "ARM_TENANT_ID": "92867854-71a8-42f2-898a-6953be9825e8"
+  },
+  "tst": {
+    "ARM_CLIENT_ID": "388fc981-9cf1-4f99-aec5-1db7f3f94c52",
+    "ARM_SUBSCRIPTION_ID": "9e1907c6-d27e-47b1-ad31-141d2066e9a6",
+    "ARM_TENANT_ID": "92867854-71a8-42f2-898a-6953be9825e8"
+  },
+  "prd": {
+    "ARM_CLIENT_ID": "4565d5e1-4285-4022-b289-b0e6b9ddc748",
+    "ARM_SUBSCRIPTION_ID": "ed37428b-7634-41d1-afa4-1cf71f5e8eda",
+    "ARM_TENANT_ID": "92867854-71a8-42f2-898a-6953be9825e8"
+  }
+}
