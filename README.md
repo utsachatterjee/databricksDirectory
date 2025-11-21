@@ -243,32 +243,3 @@ terragrunt run-all apply
 ## If you want to destroy infrastructure, be aware what directory you are in. It will destroy all within.
 terragrunt run-all destroy
 ```
-
-# Contributing Guidelines
-
-Please see [CONTRIBUTING.md](CONTRIBUTING.md)
-
-# Code of Conduct
-
-Please see [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-
-<!-- CONTACT -->
-# Contact
-
-**Product Maintainer**: Team Name - <team_email@wcgclinical.com>
-
-**Project Link**: [https://bitbucket.org/wcgclinical/repo_name](https://bitbucket.org/wcgclinical/repo_name/src)
-
-**Template Maintainer**: The [original project template](https://bitbucket.org/wcgclinical/template_cloud_deploy_pattern/src/main/) is maintained by the [Enterprise DevSecOps](enterprise_devsecops@wcgclinical.com) team
-
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-
-[Terraform.io]: https://img.shields.io/badge/terraform-%235835CC.svg?style=for-the-badge&logo=terraform&logoColor=white
-[Terraform-url]: https://www.terraform.io/
-[Terragrunt.io]: https://img.shields.io/badge/terragrunt-%235835CC.svg?style=for-the-badge&logo=terragrunt&logoColor=white
-[Terragrunt-url]: https://terragrunt.gruntwork.io/
-[AzureCli.com]: https://img.shields.io/badge/azure_cli-%230072C6.svg?style=for-the-badge&logo=microsoftazure&logoColor=white
-[AzureCli-url]: https://learn.microsoft.com/en-us/cli/azure/install-azure-cli
-[Go.dev]: https://img.shields.io/badge/go-%2300ADD8.svg?style=for-the-badge&logo=go&logoColor=white
-[Go-url]: https://go.dev/
